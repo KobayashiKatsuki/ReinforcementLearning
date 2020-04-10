@@ -89,7 +89,7 @@ def solve_maze(gw:grid_world.GridWorld,
 if __name__ == '__main__':
     
     """ 迷路（環境）生成 """
-    filename = './grid_world_3.xlsx'
+    filename = '../data/grid_world_cliff.xlsx'
     gw = grid_world.GridWorld(filename)
     gw.create_grid_world()
     

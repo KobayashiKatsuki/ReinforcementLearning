@@ -3,19 +3,23 @@
 迷路の世界
 
 ・迷路はエクセルファイルで設計する
-・迷路の範囲は
+　迷路の範囲は
 　シートの左上（A1）から
 　EOG（End of Grid）があるセルの左上まで
 　とする（EOGの先にあるデータは無視する）
-・開始点をS（Start）、終点をG（Goal）、
+ 
+・セルの種類
+　開始点をS（Start）、終点をG（Goal）、
 　通れないセルをW（Wall）とする
- 空白セルは通れるセルだが内部でF（Floor）に変換される
+　トラップセルT（Trap）を踏むと死亡する（報酬-100） 
+ 数値のセルはその値だけ報酬が得られることを表す（1以上9以下、1は空白と同値）
+ 空白セルは報酬1
 
 ・以下の場合はエラー
 　‐EOGが無い、または複数ある
 　‐EOGがA列または1行目にある（範囲を生成できない）
 　‐SまたはGが無い、またはGが複数ある
-
+ 
 """
 
 import pandas as pd
@@ -28,7 +32,7 @@ class GridWorld:
         self.__gw = pd.DataFrame() # 迷路の範囲
         self.__S_pos = () # 始点の座標
         self.__G_pos = () # ゴールの座標
-        self.__action_list = ['U', 'D', 'L', 'R'] # 可能な行動
+        self.__action_list = ['U', 'D', 'L', 'R'] # この世界で可能な行動
         self.__state_to_pos = {} # ステートをキーに、座標をバリューにした辞書
         self.__pos_to_state = {} # 座標をキーに、ステートをバリューにした辞書
                         
@@ -38,16 +42,17 @@ class GridWorld:
             # 有効な迷路の範囲を取得
             assert self.is_griddata_valid(), 'grid data is invalid'
             # NaNをF（Floor）に塗り替える
-            self.__gw = self.__gw.fillna('F')
+            self.__gw = self.__gw.fillna('1')
 
             # ステートidを振っていく
             self.__start_s_id = ''
             self.__goal_s_id = ''
-            s_idx = 1
+            s_idx = 0
             for c in range(len(self.__gw.columns)):
                 for r in range(len(self.__gw)):   
                     cell_attr = self.get_cell_attribute(r, c)
                     if cell_attr != 'W':
+                        s_idx += 1
                         s_id = f's{s_idx}'
                         self.__state_to_pos[s_id] = (r, c)
                         self.__pos_to_state[(r, c)] = s_id
@@ -56,8 +61,6 @@ class GridWorld:
                             self.__start_s_id = s_id
                         if cell_attr == 'G': # ゴール地点も記憶
                             self.__goal_s_id = s_id 
-                        
-                        s_idx += 1
             
             # 初期ステートはSの位置
             self.__state = self.__start_s_id
@@ -151,6 +154,8 @@ class GridWorld:
 
         """ 現在の状態から行動可能か判断 """
         """ デフォルトを遷移失敗時のreward, stateとし、遷移成功なら更新する """
+        """ 遷移に成功しても、そこがトラップなら即死でブレークする """
+        
         cur_pos = self.__state_to_pos[self.__state]        
         reward = -1
         new_state = self.__state
@@ -185,11 +190,22 @@ class GridWorld:
                 if right_attribute != 'W':
                     new_state = self.__pos_to_state[(cur_pos[0], cur_pos[1]+1)]
                     reward = 1
-                
-        """ ゴールなら報酬弾むよ """
-        new_pos = self.__state_to_pos[new_state]
-        if self.get_cell_attribute(new_pos[0], new_pos[1]) == 'G':
-            reward = 100
+                    
+        # reward 1 は遷移成功を表すので、その時の遷移先セルの情報をチェック
+        if reward == 1:
+            # セル属性を見るために遷移先（新ステート）の座標を取得
+            new_pos = self.__state_to_pos[new_state]           
+            new_cell_attr = self.get_cell_attribute(new_pos[0], new_pos[1])
+            
+            if new_cell_attr == 'G':
+                """ ゴールなら報酬弾むよ """
+                reward = 100                
+            elif new_cell_attr == 'T':
+                """ トラップは死ね """
+                reward = -100                
+            elif new_cell_attr != 'S':
+                """ 数値セル（上記if文の後ではS以外） """
+                reward = int(new_cell_attr)
 
         return reward, new_state
     
