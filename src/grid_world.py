@@ -152,10 +152,16 @@ class GridWorld:
     def state_transition(self, action):
         """ actionをエージェントから受け取って報酬とステートを返す処理 """
 
-        """ 現在の状態から行動可能か判断 """
-        """ デフォルトを遷移失敗時のreward, stateとし、遷移成功なら更新する """
-        """ 遷移に成功しても、そこがトラップなら即死でブレークする """
+        """
+        現在の状態から行動可能か判断
+         デフォルトを遷移失敗時のreward, stateとし、遷移成功なら更新する
+         現在の状態がトラップの上ならrewardは0, 遷移しない
+        """
+        # トラップの上か判別
+        if self.is_into_trap() is True:
+            return 0, self.__state
         
+        # トラップ以外の場合は状態遷移チェック        
         cur_pos = self.__state_to_pos[self.__state]        
         reward = -1
         new_state = self.__state
@@ -217,4 +223,11 @@ class GridWorld:
         else:
             return False
         
+    def is_into_trap(self):
+        """ 現在トラップ上か判定 """
+        pos = self.__state_to_pos[self.__state] 
+        if self.get_cell_attribute(pos[0], pos[1]) == 'T':
+            return True
+        else:
+            return False
     

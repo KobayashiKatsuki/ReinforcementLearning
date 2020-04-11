@@ -73,6 +73,8 @@ def solve_maze(gw:grid_world.GridWorld,
                     plt.plot(c, r, marker='s', markersize=40, color='b')
                 elif attr == 'G':
                     plt.plot(c, r, marker='s', markersize=40, color='r')
+                elif attr == 'T':
+                    plt.plot(c, r, marker='s', markersize=46, color='gray')
             
         y, x = gw.get_position()
         plt.plot(x, y, marker='o', markersize=20)
@@ -84,6 +86,13 @@ def solve_maze(gw:grid_world.GridWorld,
             plt.title(f'{t}回目 CLEAR!')
             print('CLEAR!')
             break
+        
+        """ トラップに嵌れば死亡 """
+        if gw.is_into_trap() is True:
+            plt.title(f'{t}回目 TRAPPED!')
+            print('YOU DIED!')
+            break   
+        
 
 #%%
 if __name__ == '__main__':
@@ -130,6 +139,7 @@ if __name__ == '__main__':
             # Q(st,at)を更新
             state = gw.get_state()
             agent.update_Q_table_by_SARSA(st=state, act=action, rwd=reward, st_n=new_state, act_n=new_action)
+
             # st <- st+1, at <- at+1
             gw.update_state(new_state)           
             action = new_action
@@ -138,6 +148,11 @@ if __name__ == '__main__':
             if gw.is_arrived_at_goal() is True:
                 print(f'Goal! at episode {epi}')
                 break
+            
+            # トラップでも終了
+            if gw.is_into_trap() is True:
+                print(f'!! Trapped !! at episode {epi}')
+                break            
     
     """ 学習終了後のQtable """        
     agent.show_Q_table()
